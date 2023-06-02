@@ -54,6 +54,7 @@ class NetworkInNetwork(torch.nn.Module):
         x2 = self.linear2(x2)
         return x2
 
+
 class GraphConv(nn.Module):
     '''
     GLASS model: combine message passing layers and mlps and pooling layers.
@@ -61,16 +62,17 @@ class GraphConv(nn.Module):
         preds and pools are ModuleList containing the same number of MLPs and Pooling layers.
         preds[id] and pools[id] is used to predict the id-th target. Can be used for SSL.
     '''
+
     def __init__(self, num_layers: int, hidden_channels: int, out_channels: int):
         super().__init__()
         self.convs = []
         for _ in range(num_layers - 1):
             self.convs.append(
                 NetworkInNetwork(in_channels=hidden_channels,
-                     out_channels=hidden_channels))
+                                 out_channels=hidden_channels))
         self.convs.append(
             NetworkInNetwork(in_channels=hidden_channels,
-                 out_channels=hidden_channels))
+                             out_channels=hidden_channels))
         self.pred = nn.Linear(hidden_channels, out_channels)
 
     def forward(self, x, edge_index):
@@ -80,6 +82,7 @@ class GraphConv(nn.Module):
             emb = conv(x, edge_index, edge_weight)
             x = emb
         return self.pred(emb)
+
 
 def microf1(pred, label):
     '''
@@ -98,7 +101,7 @@ def run_node_classification(args):
     loss_fn = CrossEntropyLoss()
     optimizer = Adam(model.parameters(), lr=args.lr)
     for epoch in range(args.epochs):
-        print(f"Epoch {epoch+1}")
+        print(f"Epoch {epoch + 1}")
         print(f"Training loss: {train(optimizer, model, data, split['train_mask'], loss_fn)}")
         print(f"Validation score: {test(model, data, split['val_mask'])}")
         print(f"Testing Score: {test(model, data, split['test_mask'])}")
