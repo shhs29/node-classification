@@ -17,22 +17,25 @@ from torch_geometric.transforms import RandomNodeSplit
 
 
 class NetworkInNetwork(torch.nn.Module):
-    '''
-    Based off GLASSConv, but no mixing and simple 2 linear layers with norm and dropout in between.
-    '''
+    """
+    NetworkInNetwork model: use multiple linear layers within a message passing layer.
+    Args:
+        in_channels is the input feature dimensionality of the message passing layer.
+        out_channels is the output dimensionality of the message passing layer.
+        activation is the activation function between layers.
+        dropout is the dropout rate of the neural network.
+    """
 
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
                  activation=nn.ELU(inplace=True),
-                 aggr="mean",
                  dropout=0.2):
         super().__init__()
         self.linear1 = linear.Linear(in_channels, out_channels, weight_initializer='glorot')
         self.linear2 = linear.Linear(in_channels + out_channels, out_channels, weight_initializer='glorot')
         self.adj = torch.sparse_coo_tensor(size=(0, 0))
         self.activation = activation
-        self.aggr = aggr
         self.gn = GraphNorm(out_channels)
         self.reset_parameters()
         self.dropout = dropout
@@ -56,12 +59,13 @@ class NetworkInNetwork(torch.nn.Module):
 
 
 class GraphConv(nn.Module):
-    '''
-    GLASS model: combine message passing layers and mlps and pooling layers.
+    """
+    GraphConv model: combine Network in Network message passing layers and prediction layer.
     Args:
-        preds and pools are ModuleList containing the same number of MLPs and Pooling layers.
-        preds[id] and pools[id] is used to predict the id-th target. Can be used for SSL.
-    '''
+        num_layers is the number of message passing layers.
+        hidden_channels is the hidden dimensionality.
+        out_channels is the output dimensionality.
+    """
 
     def __init__(self, num_layers: int, hidden_channels: int, out_channels: int):
         super().__init__()
@@ -85,14 +89,13 @@ class GraphConv(nn.Module):
 
 
 def microf1(pred, label):
-    '''
-    multi-class micro-f1
-    '''
+    """Calculate the multi-class micro-f1."""
     pred_i = np.argmax(pred, axis=1)
     return f1_score(label, pred_i, average="micro")
 
 
 def plot_values(x_values: List[int], y_values: List[float], x_label: str = "Epochs", y_label: str = "Loss"):
+    """Plot the different metrics of the model."""
     plt.figure(figsize=(20, 10))
     plt.plot(x_values, y_values, marker='o')
     plt.xticks(x_values)
@@ -102,6 +105,7 @@ def plot_values(x_values: List[int], y_values: List[float], x_label: str = "Epoc
 
 
 def run_node_classification(args):
+    """Run a node classification graph neural network model."""
     path = osp.join(osp.dirname(osp.realpath(__file__)), '', 'data')
     dataset = Planetoid(root=path, name=args.dataset)
     data = dataset[0]
@@ -131,9 +135,7 @@ def run_node_classification(args):
 
 
 def train(optimizer, model, dataset, train_mask, loss_fn):
-    '''
-    Train models in an epoch.
-    '''
+    """Training a model in an epoch."""
     model.train()
     optimizer.zero_grad()
     pred = model(dataset.x, dataset.edge_index)
@@ -145,9 +147,7 @@ def train(optimizer, model, dataset, train_mask, loss_fn):
 
 @torch.no_grad()
 def test(model, dataset, test_mask):
-    '''
-    Test models either on validation dataset or test dataset.
-    '''
+    """Testing a model either on validation dataset or test dataset."""
     model.eval()
     preds = model(dataset.x, dataset.edge_index)
     return microf1(preds[test_mask].numpy(), dataset.y[test_mask].numpy())
