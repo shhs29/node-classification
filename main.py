@@ -1,19 +1,17 @@
-from copy import copy
+import argparse
+import os.path as osp
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
+import torch.nn.functional as F
+import torch_geometric.nn.dense.linear as linear
 from sklearn.metrics import f1_score
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from torch_geometric.datasets import Planetoid
-import argparse
-import os.path as osp
-
 from torch_geometric.nn import GraphNorm
 from torch_geometric.transforms import RandomNodeSplit
-import torch_geometric.nn.dense.linear as linear
 
 
 class NetworkInNetwork(torch.nn.Module):
