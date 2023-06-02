@@ -1,11 +1,13 @@
 import argparse
 import os.path as osp
+from typing import List
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch_geometric.nn.dense.linear as linear
+from matplotlib import pyplot as plt
 from sklearn.metrics import f1_score
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
@@ -90,6 +92,15 @@ def microf1(pred, label):
     return f1_score(label, pred_i, average="micro")
 
 
+def plot_values(x_values: List[int], y_values: List[float], x_label: str = "Epochs", y_label: str = "Loss"):
+    plt.figure(figsize=(20, 10))
+    plt.plot(x_values, y_values, marker='o')
+    plt.xticks(x_values)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.show()
+
+
 def run_node_classification(args):
     path = osp.join(osp.dirname(osp.realpath(__file__)), '', 'data')
     dataset = Planetoid(root=path, name=args.dataset)
@@ -98,11 +109,25 @@ def run_node_classification(args):
     model = GraphConv(num_layers=3, hidden_channels=data.x.shape[1], out_channels=7)
     loss_fn = CrossEntropyLoss()
     optimizer = Adam(model.parameters(), lr=args.lr)
+    training_loss = []
+    val_scores = []
+    test_scores = []
     for epoch in range(args.epochs):
         print(f"Epoch {epoch + 1}")
-        print(f"Training loss: {train(optimizer, model, data, split['train_mask'], loss_fn)}")
-        print(f"Validation score: {test(model, data, split['val_mask'])}")
-        print(f"Testing Score: {test(model, data, split['test_mask'])}")
+        loss = train(optimizer, model, data, split['train_mask'], loss_fn)
+        training_loss.append(loss.detach().numpy())
+        print(f"Training loss: {loss}")
+        val_score = test(model, data, split['val_mask'])
+        val_scores.append(val_score)
+        print(f"Validation score: {val_score}")
+        test_score = test(model, data, split['test_mask'])
+        test_scores.append(test_score)
+        print(f"Testing Score: {test_score}")
+
+    x_values = list(range(1, args.epochs + 1))
+    plot_values(x_values, training_loss, y_label="Train Loss")
+    plot_values(x_values, val_scores, y_label="Micro F1-score")
+    plot_values(x_values, test_scores, y_label="Micro F1-score")
 
 
 def train(optimizer, model, dataset, train_mask, loss_fn):
